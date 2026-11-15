@@ -326,8 +326,35 @@ def parse_control(spec, table, where):
                  'Use "knob" or "fader" for continuous parameters, or make the parameter a choiceParam()/boolParam() in the code.')
         if len(param.choices) > MAX_SWITCH_CHOICES:
             fail(where, '"switch" fits at most %d choices in a slot; "%s" has %d.' % (MAX_SWITCH_CHOICES, param.name, len(param.choices)),
-                 'Use {"param": "%s", "widget": "slider", "overlay": "menu"} instead (a bar that steps through the choices with a menu on double-tap).' % param.name)
+                 'Use {"param": "%s", "widget": "knob", "overlay": "menu"} instead (a themed knob that steps through the choices, with a menu of them on double-tap).' % param.name)
     return Control(widget, param=param, visible=visible, overlay=overlay, polarity=polarity)
+
+
+LEVEL_WORDS = ("level", "volume", "vol", "mix", "wet", "dry", "send", "gain", "attack", "decay", "sustain", "release")
+
+
+def themed_suggestion(param):
+    """The kit widget to use instead of the generic slider for a parameter, as ui.json text."""
+    if param.is_discrete:
+        if len(param.choices) <= MAX_SWITCH_CHOICES:
+            return '"widget": "switch"'
+        return '"widget": "knob", "overlay": "menu"'
+    if any(w in param.name.lower() for w in LEVEL_WORDS):
+        return '"widget": "fader"'
+    return '"widget": "knob"'
+
+
+def warn_generic_sliders(pages):
+    """A UI that uses the kit's knobs, faders and switches should not also have the MPC's plain generic sliders: they
+    look out of place. Say which controls to change, and to what."""
+    generic = [(pg, c) for pg in pages for c in pg.controls if c.widget == "slider" and c.param is not None]
+    if not generic:
+        return
+    print('gen_ui: WARNING: %d control%s use the MPC\'s plain generic slider, which looks out of place beside the themed '
+          'knobs, faders and switches. Give each a kit widget (a plain string entry, or "widget": "slider", is the generic slider):'
+          % (len(generic), "" if len(generic) == 1 else "s"))
+    for pg, c in generic:
+        print('gen_ui:   page "%s": "%s" -> {"param": "%s", %s}' % (pg.name, c.param.name, c.param.name, themed_suggestion(c.param)))
 
 
 def load_ui(path, table):
@@ -393,7 +420,9 @@ def load_ui(path, table):
     uses_kit = any(c.widget in KIT_WIDGETS for pg in pages for c in pg.controls)
     if kit is None and uses_kit:
         kit = {"theme": "mpc-red", "accent": style["accent"] if "accent" in data.get("style", {}) else None}
-    elif kit is not None and not uses_kit:
+    if uses_kit:
+        warn_generic_sliders(pages)
+    if kit is not None and not uses_kit:
         print('gen_ui: NOTE: "kit" is set but no control uses "knob", "fader" or "switch"; nothing from the kit is drawn.')
     return pages, style, knob_image, frames, kit
 

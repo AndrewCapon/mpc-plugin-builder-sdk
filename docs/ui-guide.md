@@ -47,10 +47,10 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
     {
       "name": "LFO",
       "controls": [
-        { "param": "Shape", "widget": "slider", "overlay": "menu" },
+        { "param": "Shape", "widget": "knob", "overlay": "menu" },
         { "param": "Sync",  "widget": "switch" },
         { "param": "Rate",  "widget": "knob", "visibleWhen": { "param": "Sync", "choice": "Off" } },
-        { "param": "Div",   "widget": "slider", "overlay": "menu", "visibleWhen": { "param": "Sync", "choice": "On" } }
+        { "param": "Div",   "widget": "knob", "overlay": "menu", "visibleWhen": { "param": "Sync", "choice": "On" } }
       ]
     }
   ],
@@ -62,8 +62,8 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
 |---|---|
 | `pages[].name` | Function-key label. Up to 32 pages. |
 | `pages[].background` | Optional: a PNG from the project's `assets/` folder (copied into `Plugin Skins/` by the build) drawn behind that page's controls, over the background colour. Size it to the 1280-wide touch screen area of the tab. |
-| `pages[].controls[]` | Up to 16 entries. A plain string is a parameter **name** exactly as declared in code (`floatParam("cutoff", "Cutoff", ...)` → `"Cutoff"`), shown as a generic slider; the string `"empty"` leaves the slot blank. |
-| `widget` | `"knob"` (film-strip knob with name and value), `"fader"` (horizontal film-strip fader under a name / value header), `"switch"` (toggle for bool parameters, 2–4 captioned segment buttons for choice parameters), `"slider"` (default: the MPC's generic name + value bar), `"text"` (a static heading; needs `text`), `"empty"`. |
+| `pages[].controls[]` | Up to 16 entries. A plain string is a parameter **name** exactly as declared in code (`floatParam("cutoff", "Cutoff", ...)` → `"Cutoff"`), shown as a generic slider (so use the object form with a `widget` instead); the string `"empty"` leaves the slot blank. |
+| `widget` | `"knob"` (film-strip knob with name and value), `"fader"` (horizontal film-strip fader under a name / value header), `"switch"` (toggle for bool parameters, 2–4 captioned segment buttons for choice parameters), `"slider"` (the default when no widget is given: the MPC's generic name + value bar, which looks plain beside kit widgets, so avoid it in a themed UI), `"text"` (a static heading; needs `text`), `"empty"`. |
 | `polarity` | For `knob` and `fader`: `"auto"` (default), `"unipolar"` or `"bipolar"`. Bipolar strips fill from the centre. Auto picks bipolar when the parameter's default is the centre of its range and its value text reads as zero. |
 | `overlay` | What double-tap / Enter opens: `"knob"` (big knob editor, default) or `"menu"` (a list; the default for `switch`, and the right choice for any long choice list). |
 | `visibleWhen` | Show this control only while another parameter has a given value: `{"param": "Wave", "choice": "Square"}` or `{"param": "Sync", "index": 1}`. Works with choice and bool parameters. |
@@ -83,15 +83,17 @@ The kit exists so a page reads at a glance: a knob says "dial this in", a fader 
 |---|---|---|
 | On/off (bool) | `switch` | A pill toggle; the value text still says On / Off. |
 | Mode with 2–4 options (filter type, waveform, routing) | `switch` | Segment buttons captioned with the choice names; one tap selects. |
-| Mode with 5 or more options (note divisions, long wave lists) | `slider` + `"overlay": "menu"` | Segments would not fit; the bar steps with the Q-Link and the menu lists everything. |
+| Mode with 5 or more options (note divisions, long wave lists) | `knob` + `"overlay": "menu"` | Segments would not fit; the themed knob steps through the choices with the Q-Link and a double-tap opens a menu that lists them all. |
 | Tone and character: cutoff, resonance, drive, tune, detune, rate, depth, width | `knob` | Dialled by feel; the arc shows where you are in the range. |
 | Anything centred on zero: pan, fine tune, pitch offsets, modulation amounts that go negative | `knob` (bipolar) | The arc grows from the centre, so zero is obvious. Auto-detected for centre-zero defaults; set `"polarity": "bipolar"` otherwise. |
 | Levels and mixes: volume, level, mix, dry/wet, send | `fader` | "How much" reads best as a bar filling from the left. |
 | Envelope stages (A, D, S, R) | four `fader`s in one row | A row of faders looks like the envelope it controls. |
 | Time, size, feedback on delays and reverbs | `knob` | Range-y parameters that are dialled, not set. |
-| Values where the text matters more than the position (note names, ratios, divisions) | `slider` | The generic bar shows the value text large. |
+| Values where the text matters more than the position (note names, ratios, divisions) | `knob` + `"overlay": "menu"` | The knob shows the value text too, and the menu lists every value. |
 
 Rules of thumb:
+
+- **Do not use the generic `slider` in a themed UI.** The plain MPC bar (what a bare parameter name, or `"widget": "slider"`, gives you) looks out of place next to film-strip knobs, faders and switches. Every parameter you show gets a kit widget; the table above has one for every case, including long choice lists. `gen_ui.py` prints a WARNING naming each generic slider it finds and the widget to use instead. Keep the generic slider only for a plugin with no kit widgets at all.
 
 - Top row of page 1: the four controls someone touches first (cutoff and resonance on a synth; time, feedback and mix on a delay), as knobs or faders, never switches.
 - Group by signal flow: oscillators, filter, envelopes, modulation, effects, output. Put a section's switch (its mode) in the same row as the knobs it changes.
