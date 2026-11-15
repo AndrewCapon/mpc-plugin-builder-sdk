@@ -17,6 +17,12 @@
                 "$ref": "#/definitions/page"
             }
         },
+        "qlinkGroups": {
+            "type": "string",
+            "enum": ["columns", "rows"],
+            "default": "columns",
+            "description": "Whether a Q-Link group of four knobs (and the rectangle the MPC draws around it) is a column or a row of the 4 x 4 grid. One choice for the whole plugin."
+        },
         "style": {
             "type": "object",
             "description": "Colours as 8-digit ARGB hex strings (alpha first). All optional.",

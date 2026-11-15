@@ -429,6 +429,67 @@ def walk(value, path=""):
                 yield item
 
 
+def parse_box(text):
+    try:
+        x, y, w, h = [float(v) for v in str(text).split()]
+        return (x, y, x + w, y + h)
+    except ValueError:
+        return None
+
+
+def check_qlink_rects(rep, tabs):
+    """Each tab's Q-Link group rectangles (qlinkBoundsData) must enclose the controls of their group cleanly: none may
+    cut through a control, run off the 1280 x 628 tab area, or sit unevenly around what it encloses."""
+    problems = 0
+    for ti, tab in enumerate(tabs):
+        if not isinstance(tab, dict):
+            continue
+        rects = [parse_box(r) for r in tab.get("qlinkBoundsData") or []]
+        comp = tab.get("componentDefinition")
+        children = comp.get("componentsData") if isinstance(comp, dict) else None
+        if not rects or not isinstance(children, list):
+            continue
+        name = tab.get("tabName", "tab %d" % (ti + 1))
+        boxes = []
+        for ch in children:
+            try:
+                b = ch["bounds"]
+                if b.get("boundsType", "Absolute") != "Absolute":
+                    continue
+                box = parse_box(b["bounds"])
+                label = ch["componentData"]["name"]
+            except (KeyError, TypeError, AttributeError):
+                continue
+            if box and (box[2] - box[0]) * (box[3] - box[1]) < 0.5 * 1280 * 628:   # not a full-tab background image
+                boxes.append((label, box))
+        for ri, r in enumerate(rects):
+            if r is None:
+                continue
+            if r[0] < 0 or r[1] < 0 or r[2] > 1280 or r[3] > 628:
+                rep.warn('Tab "%s": Q-Link rectangle %d runs off the 1280 x 628 tab area' % (name, ri + 1))
+                problems += 1
+            inside = []
+            for label, b in boxes:
+                ix, iy = min(r[2], b[2]) - max(r[0], b[0]), min(r[3], b[3]) - max(r[1], b[1])
+                if ix <= 0 or iy <= 0:
+                    continue
+                if b[0] >= r[0] and b[1] >= r[1] and b[2] <= r[2] and b[3] <= r[3]:
+                    inside.append(b)
+                else:
+                    rep.warn('Tab "%s": Q-Link rectangle %d cuts through the control "%s" (it overlaps it but does not enclose it). '
+                             'Make the rectangle enclose the whole group, or move the control.' % (name, ri + 1, label))
+                    problems += 1
+            if inside:
+                gaps = (min(b[0] for b in inside) - r[0], min(b[1] for b in inside) - r[1],
+                        r[2] - max(b[2] for b in inside), r[3] - max(b[3] for b in inside))
+                if max(gaps[0], gaps[2]) - min(gaps[0], gaps[2]) > 12 or max(gaps[1], gaps[3]) - min(gaps[1], gaps[3]) > 12:
+                    rep.warn('Tab "%s": Q-Link rectangle %d sits unevenly around its controls (gaps left %d, top %d, right %d, bottom %d px); '
+                             'give it the same gap on every side' % ((name, ri + 1) + tuple(int(g) for g in gaps)))
+                    problems += 1
+    if not problems:
+        rep.ok("TUI.json: Q-Link group rectangles enclose their controls evenly")
+
+
 def check_skins(rep, skins_dir, nparams):
     tui_path = os.path.join(skins_dir, "TUI.json")
     q_path = os.path.join(skins_dir, "Q-Links.json")
@@ -453,6 +514,7 @@ def check_skins(rep, skins_dir, nparams):
                     rep.error("TUI.json: pageData.tabs must be a non-empty array")
                 else:
                     tabs_in_tui = len(tabs)
+                    check_qlink_rects(rep, tabs)
                     if len(tabs) > MAX_TABS:
                         rep.error("TUI.json: %d tabs; at most %d are supported" % (len(tabs), MAX_TABS))
                     seen = {}

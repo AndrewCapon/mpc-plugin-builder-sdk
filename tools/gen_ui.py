@@ -38,7 +38,9 @@ import sys
 SLOT_X = [23, 343, 663, 983]
 SLOT_Y = [45, 196, 346, 497]
 SLOT_W, SLOT_H = 278, 107
-QLINK_BOUNDS = ["38 0 248 624", "358 0 248 624", "678 0 248 624", "998 0 248 624"]
+SCREEN_W, SCREEN_H = 1280, 628   # the tab area
+QLINK_PAD = 10                   # gap between a Q-Link group's rectangle and the slots it encloses (slots are 42 px apart across, 43 down)
+QLINK_GROUPS = ("columns", "rows")
 MAX_CONTROLS_PER_PAGE = 16
 MAX_PAGES = 32
 FONT_NAME = "Titillium Web"
@@ -55,7 +57,7 @@ OVERLAYS = ("knob", "menu")
 POLARITIES = ("auto", "unipolar", "bipolar")
 CONTROL_KEYS = ("param", "widget", "visibleWhen", "text", "overlay", "polarity")
 PAGE_KEYS = ("name", "controls", "background")
-UI_KEYS = ("pages", "style", "kit", "knobImage", "knobFrames")
+UI_KEYS = ("pages", "style", "kit", "knobImage", "knobFrames", "qlinkGroups")
 KIT_KEYS = ("theme", "accent")
 KIT_WIDGETS = ("knob", "fader", "switch")
 MAX_SWITCH_CHOICES = 4
@@ -424,7 +426,11 @@ def load_ui(path, table):
         warn_generic_sliders(pages)
     if kit is not None and not uses_kit:
         print('gen_ui: NOTE: "kit" is set but no control uses "knob", "fader" or "switch"; nothing from the kit is drawn.')
-    return pages, style, knob_image, frames, kit
+    groups = data.get("qlinkGroups", "columns")
+    if groups not in QLINK_GROUPS:
+        fail(path, '"qlinkGroups" must be "columns" or "rows", got %s' % json.dumps(groups),
+             "It says whether a Q-Link group of four is a column or a row of the 4 x 4 grid.")
+    return pages, style, knob_image, frames, kit, groups
 
 
 def parse_kit(spec, path, accent_in_style, style):
@@ -630,6 +636,35 @@ def overlay_component(type_name, data, bg_colour):
 # --------------------------------------------------------------------------------------------
 # Assembling the two files
 # --------------------------------------------------------------------------------------------
+def qlink_rects(page, groups="columns"):
+    """The Q-Link group rectangles for a tab ("x y w h" strings): one per group of four knobs that has a control. Each
+    encloses the slots of its own controls with the same gap (QLINK_PAD) on every side, so it never cuts through a
+    control and sits evenly around them (an empty slot at the end of a group is left outside).
+
+    groups: "columns" (a group is a column of four slots) or "rows" (a row of four slots)."""
+    used = [(i // 4, i % 4) for i, c in enumerate(page.controls) if c.param is not None]
+    if not used:
+        return []
+    pad = QLINK_PAD
+    rects = []
+    if groups == "rows":
+        for r in sorted({r for r, _c in used}):
+            cs = [c for rr, c in used if rr == r]
+            left, right = SLOT_X[min(cs)] - pad, SLOT_X[max(cs)] + SLOT_W + pad
+            rects.append((left, SLOT_Y[r] - pad, right - left, SLOT_H + 2 * pad))
+    else:
+        for c in sorted({c for _r, c in used}):
+            rs = [r for r, cc in used if cc == c]
+            top, bottom = SLOT_Y[min(rs)] - pad, SLOT_Y[max(rs)] + SLOT_H + pad
+            rects.append((SLOT_X[c] - pad, top, SLOT_W + 2 * pad, bottom - top))
+    out = []
+    for x, y, w, h in rects:
+        x2, y2 = min(x + w, SCREEN_W - 2), min(y + h, SCREEN_H - 2)
+        x, y = max(x, 2), max(y, 2)
+        out.append("%d %d %d %d" % (x, y, x2 - x, y2 - y))
+    return out
+
+
 def tab_component(page, style):
     children = []
     for i, ctl in enumerate(page.controls):
@@ -658,7 +693,7 @@ def tab_component(page, style):
     return component_definition([], children, style["background"], bg_image=page.background)
 
 
-def build_tui(pages, params, style, knob_image, frames, kit_assets):
+def build_tui(pages, params, style, knob_image, frames, kit_assets, groups="columns"):
     """kit_assets: dict asset name -> (file, frames, (w, h)) for the kit files available, or {} without a kit."""
     used = []
     for page in pages:
@@ -720,7 +755,7 @@ def build_tui(pages, params, style, knob_image, frames, kit_assets):
     for ti, page in enumerate(pages):
         tabs.append(obj(("version", 1), ("tabName", page.name), ("fnKeyIndex", ti), ("fnKeySubIndex", 0),
                         ("componentDefinition", tab_component(page, style)),
-                        ("qlinkBoundsData", list(QLINK_BOUNDS))))
+                        ("qlinkBoundsData", qlink_rects(page, groups))))
 
     page_data = obj(
         ("version", 1),
@@ -732,7 +767,7 @@ def build_tui(pages, params, style, knob_image, frames, kit_assets):
     return obj(("pageData", page_data))
 
 
-def build_qlinks(pages, params):
+def build_qlinks(pages, params, groups="columns"):
     entries = []
     for ti, page in enumerate(pages):
         assigned = {}
@@ -741,7 +776,7 @@ def build_qlinks(pages, params):
                 row, col = divmod(i, 4)
                 assigned[slot_qlink(row, col)] = ctl.param.index
         qmap = Obj(("Q-Link %d" % q, assigned.get(q, -1)) for q in range(1, 17))
-        entries.append(obj(("Tab", ti + 1), ("SubTab", 1), ("Bank Direction", "Column"), ("Q-Links", qmap)))
+        entries.append(obj(("Tab", ti + 1), ("SubTab", 1), ("Bank Direction", "RowTopDown" if groups == "rows" else "Column"), ("Q-Links", qmap)))
     by_index = {p.index: p for p in params}
     first16 = sorted(by_index)[:16]
     program = Obj(("Q-Link %d" % (q + 1), first16[q] if q < len(first16) else -1) for q in range(16))
@@ -793,9 +828,9 @@ def generate(params_path, ui_path, out_dir, assets_dir=None, quiet=False, kit_ca
     params = load_params(params_path)
     table = ParamTable(params)
     if ui_path:
-        pages, style, knob_image, frames, kit = load_ui(ui_path, table)
+        pages, style, knob_image, frames, kit, groups = load_ui(ui_path, table)
     else:
-        pages, style, knob_image, frames, kit = auto_pages(params), dict(DEFAULT_STYLE), None, 127, None
+        pages, style, knob_image, frames, kit, groups = auto_pages(params), dict(DEFAULT_STYLE), None, 127, None, "columns"
     if knob_image:
         knob_image = os.path.basename(knob_image)
         if assets_dir and not os.path.isfile(os.path.join(assets_dir, knob_image)):
@@ -806,8 +841,8 @@ def generate(params_path, ui_path, out_dir, assets_dir=None, quiet=False, kit_ca
 
     os.makedirs(out_dir, exist_ok=True)
     kit_dir, kit_assets = (kit_dir_for(kit, kit_cache, out_dir) if kit else (None, {}))
-    tui = build_tui(pages, params, style, knob_image, frames, kit_assets)
-    qlinks = build_qlinks(pages, params)
+    tui = build_tui(pages, params, style, knob_image, frames, kit_assets, groups)
+    qlinks = build_qlinks(pages, params, groups)
     if kit_dir and os.path.abspath(kit_dir) != os.path.abspath(out_dir):
         for img in sorted(referenced_images(tui, set())):
             src = os.path.join(kit_dir, img)
