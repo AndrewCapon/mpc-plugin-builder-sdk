@@ -61,6 +61,7 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
 | Field | Meaning |
 |---|---|
 | `pages[].name` | Function-key label. Up to 32 pages. |
+| `pages[].background` | Optional: a PNG from the project's `assets/` folder (copied into `Plugin Skins/` by the build) drawn behind that page's controls, over the background colour. Size it to the 1280-wide touch screen area of the tab. |
 | `pages[].controls[]` | Up to 16 entries. A plain string is a parameter **name** exactly as declared in code (`floatParam("cutoff", "Cutoff", ...)` → `"Cutoff"`), shown as a generic slider; the string `"empty"` leaves the slot blank. |
 | `widget` | `"knob"` (film-strip knob with name and value), `"fader"` (horizontal film-strip fader under a name / value header), `"switch"` (toggle for bool parameters, 2–4 captioned segment buttons for choice parameters), `"slider"` (default: the MPC's generic name + value bar), `"text"` (a static heading; needs `text`), `"empty"`. |
 | `polarity` | For `knob` and `fader`: `"auto"` (default), `"unipolar"` or `"bipolar"`. Bipolar strips fill from the centre. Auto picks bipolar when the parameter's default is the centre of its range and its value text reads as zero. |

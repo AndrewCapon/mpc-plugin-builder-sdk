@@ -113,6 +113,11 @@
                     "minLength": 1,
                     "description": "Tab label shown over the function key. Keep it to 8 characters or fewer. Defaults to the page number."
                 },
+                "background": {
+                    "type": "string",
+                    "pattern": "\\.png$",
+                    "description": "Optional PNG file name from the project's assets/ folder (build.py copies it into Plugin Skins/), drawn behind this page's controls over the background colour."
+                },
                 "controls": {
                     "type": "array",
                     "maxItems": 16,

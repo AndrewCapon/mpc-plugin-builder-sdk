@@ -54,7 +54,7 @@ WIDGETS = ("slider", "knob", "fader", "switch", "empty", "text")
 OVERLAYS = ("knob", "menu")
 POLARITIES = ("auto", "unipolar", "bipolar")
 CONTROL_KEYS = ("param", "widget", "visibleWhen", "text", "overlay", "polarity")
-PAGE_KEYS = ("name", "controls")
+PAGE_KEYS = ("name", "controls", "background")
 UI_KEYS = ("pages", "style", "kit", "knobImage", "knobFrames")
 KIT_KEYS = ("theme", "accent")
 KIT_WIDGETS = ("knob", "fader", "switch")
@@ -244,8 +244,9 @@ class Control:
 
 
 class Page:
-    def __init__(self, name, controls):
+    def __init__(self, name, controls, background=""):
         self.name = name
+        self.background = background  # optional PNG file name (project assets/ folder), drawn behind the controls
         self.controls = controls  # list of Control, at most 16, in reading order
 
 
@@ -384,7 +385,10 @@ def load_ui(path, table):
                  % (len(controls_spec), MAX_CONTROLS_PER_PAGE),
                  "Split the controls over more pages (add another entry to \"pages\").")
         controls = [parse_control(c, table, "%s.controls[%d]" % (where, ci)) for ci, c in enumerate(controls_spec)]
-        pages.append(Page(name, controls))
+        bg = pspec.get("background", "")
+        if not isinstance(bg, str):
+            fail(where, '"background" must be a PNG file name in the project\'s assets/ folder')
+        pages.append(Page(name, controls, os.path.basename(bg)))
 
     uses_kit = any(c.widget in KIT_WIDGETS for pg in pages for c in pg.controls)
     if kit is None and uses_kit:
@@ -443,14 +447,14 @@ def action(on_action, handler, handle_name, additional=""):
                ("handleName", handle_name), ("additionalData", additional))
 
 
-def background_data(colour):
+def background_data(colour, image=""):
     def side():
-        return obj(("version", 1), ("colour", colour), ("image", ""))
+        return obj(("version", 1), ("colour", colour), ("image", image))
     return obj(("version", 1), ("focussed", side()), ("unfocussed", side()))
 
 
-def component_definition(actions, children, bg_colour, ignore_mouse=False):
-    return obj(("version", 2), ("actions", actions), ("backgroundData", background_data(bg_colour)),
+def component_definition(actions, children, bg_colour, ignore_mouse=False, bg_image=""):
+    return obj(("version", 2), ("actions", actions), ("backgroundData", background_data(bg_colour, bg_image)),
                ("ignoreMousePresses", ignore_mouse), ("disableCoarseDataWheel", False),
                ("componentsData", children))
 
@@ -622,7 +626,7 @@ def tab_component(page, style):
                                       label_data("Text", style["text"], 22.0, "horizontallyCentred verticallyCentred", choice),
                                       "%d %d %d 40" % (SLOT_X[col] + x, SLOT_Y[row] + 54, width),
                                       "No", "Hide", "Always", invalidating=invalidating))
-    return component_definition([], children, style["background"])
+    return component_definition([], children, style["background"], bg_image=page.background)
 
 
 def build_tui(pages, params, style, knob_image, frames, kit_assets):
