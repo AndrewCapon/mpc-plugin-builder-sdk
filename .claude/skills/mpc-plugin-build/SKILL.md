@@ -23,7 +23,7 @@ Output: `plugins/<Name>/build/<Manufacturer> - VST - <Name>/` with `plugin.json`
 - **Host-sim dump fails** (so no `params.json`): the plugin crashes at load. Run `.sdk-tools/host_sim build/native/<slug>.dylib test --verbose` to see which opcode.
 - **Zig missing / no network**: install Zig from ziglang.org, put it on PATH or set `ZIG=`.
 
-Build until there are no errors and the validator prints only OK lines (warnings acceptable if understood). Then run the `mpc-plugin-test` skill.
+Build until there are no errors and the validator prints only OK lines (warnings acceptable if understood). Then run the `mpc-plugin-test` skill, and afterwards ASK whether they want it installed on a standalone MPC on the network for a test (never install without a yes; `mpc-plugin-deploy` skill).
 
 Details: `docs/building.md`.
 

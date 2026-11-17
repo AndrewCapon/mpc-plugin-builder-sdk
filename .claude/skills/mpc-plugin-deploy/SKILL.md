@@ -7,6 +7,8 @@ description: Install, list, update, remove or export VST2 plugins on a real Akai
 
 `tools/mpc_remote.py` talks to an MPC on the local network over SSH and manages the `VST2 Plugins` folder of one of its drives. It needs only Python 3.9+ and the computer's `ssh` command (use `python3` if `python` is not found).
 
+Offer this after every clean build: "Do you want it on your MPC for a test? What is its IP address?" Use `update` for later builds. Do not connect, `add`, `update`, `import`, `remove` or `restart` without their explicit yes and an address: **The user decides what is installed, updated or removed, and where.** Never run `mpc_remote.py add`/`update`/`import`/`remove`/`restart` unless the user has explicitly asked for that action on that MPC, in this conversation. A request such as "install it on my MPC" or "update it when you're done" covers exactly what it names; a yes to one install does not cover the next build or another MPC, unless they said so ("update it every time you rebuild"). Otherwise finish the build, then ASK whether they want it installed on an MPC and wait for the answer. Silence, a clean build or a passing test is not permission.
+
 ## What the user must have done on the MPC
 
 Check these with the user before connecting (the script also diagnoses them, but the user has to do them on the device):
