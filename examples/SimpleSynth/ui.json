@@ -40,10 +40,10 @@
       ] },
     { "name": "LFO",
       "controls": [
-        { "param": "LFO Shape", "widget": "slider", "overlay": "menu" },
+        { "param": "LFO Shape", "widget": "knob", "overlay": "menu" },
         { "param": "LFO Sync",  "widget": "switch" },
         { "param": "LFO Rate",  "widget": "knob", "visibleWhen": { "param": "LFO Sync", "choice": "Off" } },
-        { "param": "LFO Div",   "widget": "slider", "overlay": "menu", "visibleWhen": { "param": "LFO Sync", "choice": "On" } },
+        { "param": "LFO Div",   "widget": "knob", "overlay": "menu", "visibleWhen": { "param": "LFO Sync", "choice": "On" } },
         { "param": "LFO>Pitch",  "widget": "knob" },
         { "param": "LFO>Filter", "widget": "knob" },
         { "param": "Wheel Vib",  "widget": "knob" }

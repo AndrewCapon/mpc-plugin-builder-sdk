@@ -22,4 +22,6 @@ Read the report:
 
 Then listen to the WAV (ask the user to, or describe what to expect). For "no sound" problems: check `isNoteOn` handling, envelope attack/gate, output gain, and that `ctx.outputs` is written. For "clicks": smooth parameters, add short attack/release, avoid resetting phase on every block.
 
+When the tests pass, ASK whether they want it installed on a standalone MPC over the network for a real test (never install without a yes; ask for the IP address). See `mpc-plugin-deploy`.
+
 Finally remind the user to test on the MPC itself (`docs/install-and-test.md`): copy the folder into `VST2 Plugins`, enable Preferences → Enhancements (Beta) → External Plugin Support, load it, save and reload a project.

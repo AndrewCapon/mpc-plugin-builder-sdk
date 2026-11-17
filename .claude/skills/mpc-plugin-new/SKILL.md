@@ -57,4 +57,6 @@ python tools/build.py plugins/<Name>
 
 ## 5. Hand over
 
+Always ASK (never install without a yes: the user decides what is installed where) whether they want a test install on a standalone MPC over the network (ask for its IP address; `mpc-plugin-deploy` skill).
+
 Tell the user: the output folder path (`plugins/<Name>/build/<Manufacturer> - VST - <Name>/`), how to copy it to `VST2 Plugins` on a drive, that the MPC needs MPC OS 3.10.1 or later, and that External plugins must be enabled on the device (Preferences → Enhancements (Beta) → Enable Enhancements and External Plugin Support), and offer to package it (`mpc-plugin-package` skill). Summarise the parameters and pages you created.

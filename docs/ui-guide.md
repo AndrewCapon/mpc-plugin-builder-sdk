@@ -8,7 +8,7 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
 
 - Pages are function keys along the bottom of the screen; the page name is the key label (keep it short, 8 characters or fewer).
 - Each page offers a 4 × 4 grid of control slots, matching the 16 hardware knobs (Q-Links) in their 4 × 4 arrangement on MPCs. The grid is a convenience of the simple `ui.json` layout, not a limit of the MPC: with a hand-written skin controls can go anywhere (see `ui-reference.md`).
-- The hardware knobs work in **groups of four**. Touching a control selects its group, and the MPC draws a focus rectangle around that group on screen. That rectangle looks right only when the four controls it encloses sit together as one block, so lay pages out as blocks of four side by side: a row of four, or a column of four. Q-Link groups can run horizontally or vertically around the on-screen controls (bank direction `Row` or `Column`), so either shape is fine; mixing them on one page is fine too, as long as every control belongs to a clean block of four. On products with fewer knobs (Force, MPC X) the mapping still works; the bank buttons select the group.
+- The hardware knobs work in **groups of four**. Touching a control selects its group, and the MPC draws a focus rectangle around that group on screen. That rectangle looks right only when the four controls it encloses sit together as one block, so lay pages out as blocks of four. A group is a column of four slots by default (controls *n*, *n*+4, *n*+8, *n*+12 in reading order, like the hardware knob columns); set `"qlinkGroups": "rows"` in `ui.json` to make it a row of four consecutive controls instead. The orientation is one choice for the whole plugin: design every related set as one group in that orientation. The generator draws each group's rectangle around its own slots with an equal gap on every side, so it never cuts into a control (`validate.py` warns if a hand-written skin's rectangle does). On products with fewer knobs (Force, MPC X) the mapping still works; the bank buttons select the group.
 - Controls are listed in reading order: left to right, top to bottom. Leave a slot empty with `"empty"`.
 - Each control shows the parameter's name and current value text from your code. Double-tap or Enter opens a large edit overlay.
 
@@ -47,10 +47,10 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
     {
       "name": "LFO",
       "controls": [
-        { "param": "Shape", "widget": "slider", "overlay": "menu" },
+        { "param": "Shape", "widget": "knob", "overlay": "menu" },
         { "param": "Sync",  "widget": "switch" },
         { "param": "Rate",  "widget": "knob", "visibleWhen": { "param": "Sync", "choice": "Off" } },
-        { "param": "Div",   "widget": "slider", "overlay": "menu", "visibleWhen": { "param": "Sync", "choice": "On" } }
+        { "param": "Div",   "widget": "knob", "overlay": "menu", "visibleWhen": { "param": "Sync", "choice": "On" } }
       ]
     }
   ],
@@ -61,13 +61,15 @@ For full control over the look (images, custom widgets, envelopes), read `ui-ref
 | Field | Meaning |
 |---|---|
 | `pages[].name` | Function-key label. Up to 32 pages. |
-| `pages[].controls[]` | Up to 16 entries. A plain string is a parameter **name** exactly as declared in code (`floatParam("cutoff", "Cutoff", ...)` → `"Cutoff"`), shown as a generic slider; the string `"empty"` leaves the slot blank. |
-| `widget` | `"knob"` (film-strip knob with name and value), `"fader"` (horizontal film-strip fader under a name / value header), `"switch"` (toggle for bool parameters, 2–4 captioned segment buttons for choice parameters), `"slider"` (default: the MPC's generic name + value bar), `"text"` (a static heading; needs `text`), `"empty"`. |
+| `pages[].background` | Optional: a PNG from the project's `assets/` folder (copied into `Plugin Skins/` by the build) drawn behind that page's controls, over the background colour. Size it to the 1280-wide touch screen area of the tab. |
+| `pages[].controls[]` | Up to 16 entries. A plain string is a parameter **name** exactly as declared in code (`floatParam("cutoff", "Cutoff", ...)` → `"Cutoff"`), shown as a generic slider (so use the object form with a `widget` instead); the string `"empty"` leaves the slot blank. |
+| `widget` | `"knob"` (film-strip knob with name and value), `"fader"` (horizontal film-strip fader under a name / value header), `"switch"` (toggle for bool parameters, 2–4 captioned segment buttons for choice parameters), `"slider"` (the default when no widget is given: the MPC's generic name + value bar, which looks plain beside kit widgets, so avoid it in a themed UI), `"text"` (a static heading; needs `text`), `"empty"`. |
 | `polarity` | For `knob` and `fader`: `"auto"` (default), `"unipolar"` or `"bipolar"`. Bipolar strips fill from the centre. Auto picks bipolar when the parameter's default is the centre of its range and its value text reads as zero. |
 | `overlay` | What double-tap / Enter opens: `"knob"` (big knob editor, default) or `"menu"` (a list; the default for `switch`, and the right choice for any long choice list). |
 | `visibleWhen` | Show this control only while another parameter has a given value: `{"param": "Wave", "choice": "Square"}` or `{"param": "Sync", "index": 1}`. Works with choice and bool parameters. |
 | `kit` | The film-strip theme for `knob` / `fader` / `switch`: `"mpc-red"` (assumed when absent), `"amber"`, `"cyan"`, `"lime"`, `"violet"`, `"mono"`, or `{ "theme": "...", "accent": "AARRGGBB" }`. See `ui-kit/README.md` and `ui-kit/preview.png`. |
 | `style` | Optional ARGB colours: `background`, `accent` (focus ring; follows the kit colour unless set), `text`, `muted`. |
+| `qlinkGroups` | `"columns"` (default) or `"rows"`: whether a Q-Link group of four (and its on-screen rectangle) is a column or a row of the 4 × 4 grid. One setting for the whole plugin. |
 | `knobImage`, `knobFrames` | Optional: your own film-strip PNG from the project's `assets/` folder for `"knob"` widgets instead of the kit's. `tools/make_knob.py` can generate a plain one. |
 
 Every bool and choice parameter you reference is given discrete steps on the data wheel and the overlay, using the choice labels from your code.
@@ -82,19 +84,21 @@ The kit exists so a page reads at a glance: a knob says "dial this in", a fader 
 |---|---|---|
 | On/off (bool) | `switch` | A pill toggle; the value text still says On / Off. |
 | Mode with 2–4 options (filter type, waveform, routing) | `switch` | Segment buttons captioned with the choice names; one tap selects. |
-| Mode with 5 or more options (note divisions, long wave lists) | `slider` + `"overlay": "menu"` | Segments would not fit; the bar steps with the Q-Link and the menu lists everything. |
+| Mode with 5 or more options (note divisions, long wave lists) | `knob` + `"overlay": "menu"` | Segments would not fit; the themed knob steps through the choices with the Q-Link and a double-tap opens a menu that lists them all. |
 | Tone and character: cutoff, resonance, drive, tune, detune, rate, depth, width | `knob` | Dialled by feel; the arc shows where you are in the range. |
 | Anything centred on zero: pan, fine tune, pitch offsets, modulation amounts that go negative | `knob` (bipolar) | The arc grows from the centre, so zero is obvious. Auto-detected for centre-zero defaults; set `"polarity": "bipolar"` otherwise. |
 | Levels and mixes: volume, level, mix, dry/wet, send | `fader` | "How much" reads best as a bar filling from the left. |
 | Envelope stages (A, D, S, R) | four `fader`s in one row | A row of faders looks like the envelope it controls. |
 | Time, size, feedback on delays and reverbs | `knob` | Range-y parameters that are dialled, not set. |
-| Values where the text matters more than the position (note names, ratios, divisions) | `slider` | The generic bar shows the value text large. |
+| Values where the text matters more than the position (note names, ratios, divisions) | `knob` + `"overlay": "menu"` | The knob shows the value text too, and the menu lists every value. |
 
 Rules of thumb:
 
+- **Do not use the generic `slider` in a themed UI.** The plain MPC bar (what a bare parameter name, or `"widget": "slider"`, gives you) looks out of place next to film-strip knobs, faders and switches. Every parameter you show gets a kit widget; the table above has one for every case, including long choice lists. `gen_ui.py` prints a WARNING naming each generic slider it finds and the widget to use instead. Keep the generic slider only for a plugin with no kit widgets at all.
+
 - Top row of page 1: the four controls someone touches first (cutoff and resonance on a synth; time, feedback and mix on a delay), as knobs or faders, never switches.
 - Group by signal flow: oscillators, filter, envelopes, modulation, effects, output. Put a section's switch (its mode) in the same row as the knobs it changes.
-- Make each block of four mean something. The four knobs of a Q-Link group drive its four controls and the focus rectangle wraps them, so put one related set in each block: the four stages of an envelope, the cutoff / resonance / drive / key-tracking of a filter, the time / feedback / tone / mix of a delay. A block of four can be a row or a column. Avoid splitting a section across two blocks, and avoid blocks that mix unrelated controls just to fill space; a deliberate `empty` slot or a `text` heading is better than a stray control.
+- Make each block of four mean something. The four knobs of a Q-Link group drive its four controls and the focus rectangle wraps them, so put one related set in each block: the four stages of an envelope, the cutoff / resonance / drive / key-tracking of a filter, the time / feedback / tone / mix of a delay. A block of four is a column under the default `"qlinkGroups": "columns"` and a row under `"rows"`; pick one for the whole plugin. Avoid splitting a section across two blocks, and avoid blocks that mix unrelated controls just to fill space; a deliberate `empty` slot or a `text` heading is better than a stray control.
 - One theme per plugin. `mpc-red` matches the MPC; `amber` suits drums and analogue-style synths, `cyan` delays, reverbs and digital effects, `lime` and `violet` playful instruments, `mono` utilities. An `accent` colour makes the kit match a brand.
 - Do not rely on colour alone; the MPC screen is small and often viewed from an angle. Short names and unit-bearing value text (`1.2 kHz`, `-6.0 dB`, `1/8T`) matter more than the graphics.
 

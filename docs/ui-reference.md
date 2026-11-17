@@ -431,11 +431,11 @@ are currently active. A group can be a vertical column of four controls or a
 horizontal row of four (match `Bank Direction`, 8.3), and the rectangle can be
 any size and position, so size it to enclose the block of four controls you
 placed, with a little margin. Rectangles for a row layout are wide and short
-instead of tall and narrow. With the default slot grid, four columns of 248 px width
-with 20 px margins around the slots look like this:
+instead of tall and narrow. With the generator's slot grid (278 x 107 slots, 42 px apart across and 43 down), the
+rectangles enclose their slots with a 10 px gap on every side, here for four full columns:
 
 ```json
-"qlinkBoundsData": ["38 0 248 624", "358 0 248 624", "678 0 248 624", "998 0 248 624"]
+"qlinkBoundsData": ["13 35 298 579", "333 35 298 579", "653 35 298 579", "973 35 298 579"]
 ```
 
 Use `[]` to draw no highlight. A custom component can also suppress the

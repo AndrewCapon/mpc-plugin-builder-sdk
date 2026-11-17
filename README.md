@@ -6,24 +6,38 @@ This SDK allows you to build instrument and effect plugins for Akai MPC standalo
 
 The plugins can run on MPC X, X SE, Live, Live II, One, One+, Key 61, Key 37, Force (32-bit) and MPC Live III, MPC XL and later (64-bit).
 
-**Plugin support requires MPC OS 3.10.1 or later, with the External Plugin Support feature enabled on the device**: Preferences → Enhancements → turn on *Enable Enhancements* and *External Plugin Support*.
+**Plugin support requires MPC OS 3.10.1 or later, with the External Plugin Support feature enabled on the device**: Preferences → Enhancements (Beta) → turn on *Enable Enhancements* and *External Plugin Support*.
 
 
+```mermaid
+%% ---------------------------------------------------------------------------
+%% Seeing this as text instead of a picture? This is a Mermaid diagram.
+%% It is drawn automatically on GitHub. In VS Code, install the extension
+%% "Markdown Preview Mermaid Support", or paste this block into
+%% https://mermaid.live. In words:
+%%
+%%   1. Describe the plugin to your AI agent in plain language.
+%%   2. The agent writes a project in plugins/<Name>/ (C++, UI, presets).
+%%   3. tools/build.py builds it for every MPC with one command.
+%%   4. Install it: copy to a USB drive / SD card, or send it over the network.
+%%   5. Play it: it is listed in the MPC browser under External Plugins.
+%%
+%% docs/workflow.md explains each step.
+%% ---------------------------------------------------------------------------
+flowchart LR
+    A["<b>1. Describe</b><br/>'Make a tempo-synced tape delay<br/>with a ping-pong switch'"]
+    B["<b>2. Agent writes it</b><br/>plugins/TapeDelay/<br/>C++, UI, presets"]
+    C["<b>3. Build</b><br/>tools/build.py<br/>one command, every MPC"]
+    D1["<b>MPC hardware</b><br/>copy to USB drive / SD card<br/>'VST2 Plugins' folder"]
+    D2["<b>MPC hardware</b><br/>over the network<br/>tools/mpc_remote.py"]
+    E["<b>5. Play</b><br/>MPC browser:<br/>External Plugins"]
+
+    A --> B --> C
+    C -->|"4. Install"| D1 --> E
+    C -->|"4. Install"| D2 --> E
 ```
-"Make a tempo-synced tape delay with a feedback filter and a ping-pong switch."
-        │
-        ▼  (Claude Code / Codex, using this SDK's skills)
-plugins/TapeDelay/              ──►  python tools/build.py plugins/TapeDelay
-├── plugin.json                       │
-├── src/TapeDelay.cpp                 ▼
-├── ui.json                     plugins/TapeDelay/build/"Acme - VST - Tape Delay"/
-└── README.md                   ├── plugin.json  version.xml
-                                ├── VST/tape-delay-arm32.so   VST/tape-delay-arm64.so
-                                └── Plugin Skins/TUI.json  Q-Links.json
-                                        │
-                                        ▼  copy into  <USB or SD>/VST2 Plugins/
-                                     MPC: Preferences → Enhancements (Beta) → External Plugin Support
-```
+
+Each step is explained, with a larger diagram, in **[docs/workflow.md](docs/workflow.md)**.
 
 ## Start here
 
@@ -54,10 +68,10 @@ Paste one of these prompts into your agent with the SDK folder open:
 | `tools/` | `build.py` (one-command cross-compile for both MPC CPU families + native), `host-sim/` (a command-line host that behaves like the MPC for testing on your computer), `validate.py`, `gen_ui.py`, `package.py`, `mpc_remote.py` (install and manage plugins on an MPC over the network), `new_plugin.py`, `make_ui_kit.py` (film-strip knobs, faders, switches), `make_knob.py`, `docker/`. |
 | `examples/` | `SimpleSynth` (8-voice subtractive synth with presets), `StereoDelay` (tempo-synced effect), `DrumSynth` (multi-output drum instrument). Complete projects you can build and copy. |
 | `templates/` | Minimal instrument and effect projects used by `new_plugin.py`. |
-| `docs/` | The specifications: plugin folder and `plugin.json`, the host contract, the scripted UI JSON system (`ui-reference.md`), building, testing, presets, troubleshooting, FAQ and legal notes. |
+| `docs/` | The [workflow](docs/workflow.md) from idea to installed plugin, and the specifications: plugin folder and `plugin.json`, the host contract, the scripted UI JSON system (`ui-reference.md`), building, testing, presets, troubleshooting, FAQ and legal notes, and the [changelog](docs/changelog.md). |
 | `ui-kit/` | Stylish unipolar/bipolar film-strip knobs and faders plus matching switches, in several colour themes. `ui.json` uses them through the `knob`, `fader` and `switch` widgets. |
 | `schemas/` | JSON Schemas for `plugin.json` and `ui.json`. |
-| `.claude/skills/`, `.agents/skills/` | Agent skills: new, dsp, ui, build, test, package, presets, troubleshoot. |
+| `.claude/skills/`, `.agents/skills/` | Agent skills: new, dsp, ui, build, test, package, presets, deploy (install on an MPC over the network), troubleshoot. |
 
 ## Requirements
 
@@ -72,6 +86,11 @@ An MPC plugin is a Linux shared library following the VST 2.4 binary interface, 
 ## Safety
 
 Third-party plugins run inside the MPC application without protection. A bug can freeze or restart the MPC. Test with the host simulator first, save your work often, and remove a misbehaving plugin's folder from the drive to recover. inMusic does not test or support third-party plugins.
+
+## What's new
+
+New features and fixes are described in the SDK [changelog](docs/changelog.md).
+
 
 ## Licence
 

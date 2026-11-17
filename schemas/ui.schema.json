@@ -17,6 +17,12 @@
                 "$ref": "#/definitions/page"
             }
         },
+        "qlinkGroups": {
+            "type": "string",
+            "enum": ["columns", "rows"],
+            "default": "columns",
+            "description": "Whether a Q-Link group of four knobs (and the rectangle the MPC draws around it) is a column or a row of the 4 x 4 grid. One choice for the whole plugin."
+        },
         "style": {
             "type": "object",
             "description": "Colours as 8-digit ARGB hex strings (alpha first). All optional.",
@@ -113,6 +119,11 @@
                     "minLength": 1,
                     "description": "Tab label shown over the function key. Keep it to 8 characters or fewer. Defaults to the page number."
                 },
+                "background": {
+                    "type": "string",
+                    "pattern": "\\.png$",
+                    "description": "Optional PNG file name from the project's assets/ folder (build.py copies it into Plugin Skins/), drawn behind this page's controls over the background colour."
+                },
                 "controls": {
                     "type": "array",
                     "maxItems": 16,
@@ -156,7 +167,7 @@
                         "text"
                     ],
                     "default": "slider",
-                    "description": "\"knob\": film-strip knob with name and value (kit). \"fader\": horizontal film-strip fader under a name/value header (kit). \"switch\": toggle for a bool parameter or 2-4 captioned segment buttons for a choice parameter (kit). \"slider\": the MPC's generic name + value bar (works for every parameter kind). \"empty\": leave the slot blank. \"text\": a static heading (needs \"text\")."
+                    "description": "\"knob\": film-strip knob with name and value (kit). \"fader\": horizontal film-strip fader under a name/value header (kit). \"switch\": toggle for a bool parameter or 2-4 captioned segment buttons for a choice parameter (kit). \"slider\": the MPC's plain generic name + value bar (works for every parameter kind, but looks out of place beside kit widgets: avoid it in a themed UI; use \"knob\" with overlay \"menu\" for long choice lists). \"empty\": leave the slot blank. \"text\": a static heading (needs \"text\")."
                 },
                 "polarity": {
                     "type": "string",

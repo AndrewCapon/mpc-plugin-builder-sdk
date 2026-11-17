@@ -29,7 +29,7 @@ Use the skills in `.claude/skills/` (Claude Code) or `.agents/skills/` (Codex); 
 2. Write `src/<Class>.cpp` against `framework/mpc_plugin.h` using `framework/dsp/*.h`; write `ui.json`; write `README.md`.
 3. `python tools/build.py plugins/<Name>` until it is clean.
 4. `.sdk-tools/host_sim plugins/<Name>/build/native/<slug>.<dylib|so|dll> test --wav plugins/<Name>/build/test.wav` until no FAIL and the WARNs are understood.
-5. Tell the user where the output folder is and how to install it; offer `python tools/package.py plugins/<Name>`, and, if their MPC is on the same network, offer to install it for them with the `mpc-plugin-deploy` skill.
+5. Always ASK whether they want a test install on a standalone MPC over the network (ask for its IP address), and install only if they say yes. Tell the user where the output folder is and how to install it; offer `python tools/package.py plugins/<Name>`, and, if their MPC is on the same network, offer to install it for them with the `mpc-plugin-deploy` skill.
 
 Never report a plugin as done without steps 3 and 4 passing.
 
@@ -45,6 +45,7 @@ Commands here say `python`; on macOS and some Linux systems only `python3` exist
 - **Parameter 0 is nudged by the host on every load.** Make it harmless (master volume) with no side effects.
 - **CPU**: the MPC is a slow ARM device. Aim for a few percent of one core per instance; no per-sample transcendental functions in inner loops.
 - **Nothing proprietary**: do not fetch, copy or depend on files from MPC firmware, Steinberg's VST SDK, or code with licences incompatible with the user's intent. Note the licence of any DSP you borrow in the project README.
+- **User stays in control of installs.** The user decides what is installed, updated or removed, and where. Never run `mpc_remote.py add`/`update`/`import`/`remove`/`restart` unless the user has explicitly asked for that action on that MPC, in this conversation. A request such as "install it on my MPC" or "update it when you're done" covers exactly what it names; a yes to one install does not cover the next build or another MPC, unless they said so ("update it every time you rebuild"). Otherwise finish the build, then ASK whether they want it installed on an MPC and wait for the answer. Silence, a clean build or a passing test is not permission.
 - **No system modification**: never suggest rooting, firmware patches or editing MPC system files. The official route is the `VST2 Plugins` folder and the preference switch. The one remote route is `tools/mpc_remote.py` (skill `mpc-plugin-deploy`), which uses the MPC's official developer mode and only ever writes inside a drive's `VST2 Plugins` folder. Do not run other commands on the device over SSH, and do not hand-write SSH/scp commands to copy plugins.
 
 ## Where to read
@@ -71,5 +72,5 @@ Commands here say `python`; on macOS and some Linux systems only `python3` exist
 - One `.cpp` per plugin unless it grows past ~800 lines; then split DSP into headers under `src/`.
 - Comment the signal flow at the top of the file and each parameter's purpose. The user will read it.
 - Short, unit-bearing parameter names and sensible defaults; a master volume parameter first; 3–8 built-in programs.
-- A `ui.json` that uses the UI kit: `knob`, `fader` and `switch` widgets (heuristics in the `mpc-plugin-ui` skill), not pages of generic sliders. Arrange controls in blocks of four (a row or a column, one related set each) so the Q-Link focus rectangle encloses them cleanly.
+- A `ui.json` that uses the UI kit: `knob`, `fader` and `switch` widgets (heuristics in the `mpc-plugin-ui` skill), not pages of generic sliders: never use the plain `slider` widget or a bare parameter name in a themed UI (long choice lists use `knob` with `"overlay": "menu"`), and treat the build's "generic slider" WARNING as a bug to fix. Arrange controls in blocks of four, one related set each, all in the plugin's single `"qlinkGroups"` orientation (columns by default, or rows; never mixed), so the Q-Link rectangle encloses each set cleanly.
 - Keep the project README honest: what works, what is not implemented, CPU expectations.

@@ -9,7 +9,7 @@ The MPC draws plugin UIs from JSON skins in `Plugin Skins/`. Two ways to produce
 
 ## A. The simple way: `ui.json` with the UI kit (default)
 
-Edit `plugins/<Name>/ui.json`; `tools/build.py` turns it into the skin files. Full format: `docs/ui-guide.md`; schema: `schemas/ui.schema.json`. **Always give every parameter a real widget (`knob`, `fader` or `switch`) rather than the generic `slider`**; the generic bar is a fallback for long choice lists only. The kit graphics live in `ui-kit/` (look at `ui-kit/preview.png`; `ui-kit/README.md` explains them).
+Edit `plugins/<Name>/ui.json`; `tools/build.py` turns it into the skin files. Full format: `docs/ui-guide.md`; schema: `schemas/ui.schema.json`. **Never use the generic `slider` in a themed UI. Every parameter you show gets a kit widget (`knob`, `fader` or `switch`).** A bare parameter name in `controls` and `"widget": "slider"` both give the MPC's plain generic bar, which looks out of place beside film-strip knobs; there is no case that needs it (long choice lists use `knob` with `"overlay": "menu"`). The kit graphics live in `ui-kit/` (look at `ui-kit/preview.png`; `ui-kit/README.md` explains them).
 
 ```json
 { "kit": "mpc-red",
@@ -20,30 +20,33 @@ Edit `plugins/<Name>/ui.json`; `tools/build.py` turns it into the skin files. Fu
       { "param": "Env Amt", "widget": "knob", "polarity": "bipolar" },
       { "param": "Attack",  "widget": "fader" }, { "param": "Decay", "widget": "fader" },
       { "param": "Sustain", "widget": "fader" }, { "param": "Release", "widget": "fader" },
-      { "param": "Shape",   "widget": "slider", "overlay": "menu" },
+      { "param": "Shape",   "widget": "knob", "overlay": "menu" },
       { "param": "Rate",    "widget": "knob", "visibleWhen": { "param": "Sync", "choice": "Off" } },
       "empty", { "widget": "text", "text": "Modulation" } ] } ] }
 ```
 
 - Controls are parameter **names** exactly as declared in code (not ids). `build/params.json` lists them after a native build.
-- ≤ 16 controls per page, reading order into a 4 × 4 grid that matches the 16 hardware knobs; page names ≤ 8 characters; ≤ 32 pages.
-- Widgets: `knob`, `fader`, `switch` (kit), `slider` (generic bar), `text`, `empty`. `polarity` (`auto` / `unipolar` / `bipolar`) on knobs and faders. `overlay: "menu"` for long choice lists. `visibleWhen` shows a control only for a given choice/bool value.
+- ≤ 16 controls per page, reading order into a 4 × 4 grid that matches the 16 hardware knobs. The MPC itself does not require a grid (hand-written skins place controls freely), but the knobs work in **groups of four** and the focus rectangle wraps a group, so arrange controls as blocks of four in ONE orientation (see "Q-Link groups" below). Each block should be one coherent set, so the interface looks intentionally aligned; page names ≤ 8 characters; ≤ 32 pages.
+- Widgets: `knob`, `fader`, `switch` (kit), `text`, `empty`; `slider` (generic bar) exists only for a plugin with no kit widgets at all, so do not use it. `polarity` (`auto` / `unipolar` / `bipolar`) on knobs and faders. `overlay: "menu"` for long choice lists. `visibleWhen` shows a control only for a given choice/bool value.
 - `kit`: `mpc-red` (default), `amber`, `cyan`, `lime`, `violet`, `mono`, or `{ "theme": "...", "accent": "AARRGGBB" }`. One theme per plugin. The build renders it (cached in `build/`) and copies only the PNGs the layout uses.
 - `switch` needs a bool or a choice parameter with ≤ 4 choices; the generator fails with a hint otherwise.
 - Bool and choice parameters automatically get discrete steps and labels.
 
 ### Which widget (apply these, in order)
 
-1. **Bool → `switch`.** Choice with 2–4 options → `switch` (captioned segments). Choice with 5+ → `slider` + `"overlay": "menu"`.
+1. **Bool → `switch`.** Choice with 2–4 options → `switch` (captioned segments). Choice with 5+ → `knob` + `"overlay": "menu"` (themed; double-tap lists every choice).
 2. **Levels, mix, dry/wet, sends, envelope stages → `fader`.** Put A, D, S, R as four faders in one row or one column.
 3. **Anything centred on zero (pan, tune, pitch offset, signed mod amounts) → `knob`, bipolar.** Auto-detection catches centre-zero defaults; set `"polarity": "bipolar"` when the range is signed but the default is not zero.
 4. **Every other continuous parameter (cutoff, resonance, drive, time, feedback, rate, depth, width) → `knob`.**
-5. `slider` only when the value text is the point (note names, divisions, ratios) or the list is long.
-6. Same role, same widget on every page. Top row of page 1 = the four controls touched first, knobs or faders, never switches. Group by signal flow; keep a section's mode switch beside the knobs it affects. Rarely used settings go on a `MORE` page; leave them out of the UI if they are rarely touched (still saved and automatable).
-7. Theme: `mpc-red` unless the plugin has a character (`amber` drums/analogue, `cyan` delay/reverb/digital, `lime`/`violet` playful, `mono` utilities) or the user names a colour (`accent`).
+5. Value text is the point (note names, divisions, ratios) or the list is long → still `knob` + `"overlay": "menu"`, never `slider`.
+6. **Design in blocks of four.** One related set per group of four in the plugin's `qlinkGroups` orientation (envelope ADSR, filter cutoff/resonance/drive/tracking, delay time/feedback/tone/mix); never split a set across two blocks; use `empty` or a `text` heading rather than a stray control to complete a block. The orientation is per plugin, never per page or mixed (see below).
+7. Same role, same widget on every page. Top row of page 1 = the four controls touched first, knobs or faders, never switches. Group by signal flow; keep a section's mode switch beside the knobs it affects. Rarely used settings go on a `MORE` page; leave them out of the UI if they are rarely touched (still saved and automatable).
+8. Theme: `mpc-red` unless the plugin has a character (`amber` drums/analogue, `cyan` delay/reverb/digital, `lime`/`violet` playful, `mono` utilities) or the user names a colour (`accent`).
+
+**Q-Link groups and their rectangles.** The 16 knobs work in groups of four, and the MPC draws a rectangle around the active group. `ui.json` has ONE group orientation for the whole plugin, `"qlinkGroups"`: `"columns"` (default: a group is a column of four slots, i.e. controls *n*, *n*+4, *n*+8, *n*+12 in reading order, matching the hardware knob columns) or `"rows"` (a group is a row: four consecutive controls). Pick the orientation first, then design every related set (envelope, filter, delay) as exactly one group in THAT orientation, so the rectangle encloses one coherent set. Never mix orientations (a set laid out as a row under `"columns"` is sliced by four column rectangles). The generator sizes each rectangle to enclose its group's slots with an equal gap on every side, so a rectangle cannot cut into a control; `validate.py` warns ("cuts through", "runs off", "sits unevenly") if one does, which is mainly a risk in hand-written skins and with `background` artwork: keep art out of the gaps between groups, or aligned to them.
 
 Regenerate by rebuilding (`python tools/build.py plugins/<Name>`), or run the generator alone for a quick check:
-`python tools/gen_ui.py --params plugins/<Name>/build/params.json --ui plugins/<Name>/ui.json --out "plugins/<Name>/build/<Manufacturer> - VST - <Name>/Plugin Skins" --kit-cache plugins/<Name>/build`. Read its NOTE lines (bipolar auto-detection) and fix any ERROR (it names the control and the allowed values).
+`python tools/gen_ui.py --params plugins/<Name>/build/params.json --ui plugins/<Name>/ui.json --out "plugins/<Name>/build/<Manufacturer> - VST - <Name>/Plugin Skins" --kit-cache plugins/<Name>/build`. Read its output: **a `WARNING` about generic sliders is a defect: change every control it lists to the widget it suggests and rebuild until it is gone** (the build shows it too). Read its NOTE lines (bipolar auto-detection) and fix any ERROR (it names the control and the allowed values).
 
 ## B. Full control: hand-written skins
 
