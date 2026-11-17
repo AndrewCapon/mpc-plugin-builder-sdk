@@ -836,6 +836,11 @@ def generate(params_path, ui_path, out_dir, assets_dir=None, quiet=False, kit_ca
         if assets_dir and not os.path.isfile(os.path.join(assets_dir, knob_image)):
             print('gen_ui: WARNING: knobImage "%s" not found in %s; the knob will render blank on the MPC.'
                   ' (tools/make_knob.py can generate one.)' % (knob_image, assets_dir))
+    if assets_dir:
+        for pg in pages:
+            if pg.background and not os.path.isfile(os.path.join(assets_dir, pg.background)):
+                print('gen_ui: WARNING: page "%s" background "%s" not found in %s; the page will have a plain background on the MPC.'
+                      % (pg.name, pg.background, assets_dir))
     if len(pages) > 6 and not quiet:
         print("gen_ui: NOTE: %d pages; the MPC screen has six function keys, so tabs beyond the sixth are untested." % len(pages))
 
